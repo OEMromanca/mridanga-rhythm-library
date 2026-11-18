@@ -1,13 +1,11 @@
-"use client";
-
 import { Drum, Music2 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { headers } from "next/headers";
 import { CATEGORIES } from "@/lib/mantra/types";
 import type { Mantra } from "@/lib/mantra/types";
 import { cn } from "@/lib/utils";
 
-export function Sidebar({
+export async function Sidebar({
   mantras,
   isBeatsActive,
   onSelectBeats,
@@ -16,7 +14,8 @@ export function Sidebar({
   isBeatsActive?: boolean;
   onSelectBeats?: () => void;
 }) {
-  const pathname = usePathname();
+  const headersList = await headers();
+  const pathname = headersList.get("x-invoke-path") || headersList.get("x-current-path") || "";
 
   // Compute counts dynamically from mantras
   const counts = mantras.reduce((acc, m) => {
