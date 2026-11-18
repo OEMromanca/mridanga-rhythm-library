@@ -6,5 +6,6 @@ module.exports = {
   rules: {
     "@typescript-eslint/no-explicit-any": "error",
     "prefer-const": "error",
+    "no-var": "error"
   },
 };

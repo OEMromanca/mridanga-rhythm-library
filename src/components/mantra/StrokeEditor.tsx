@@ -178,9 +178,6 @@ export function StrokeEditor({ strokes, onChange }: { strokes: Stroke[]; onChang
         <p className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">No strokes yet. Add the first one below.</p>
       )}
       {strokes.map((s, i) => {
-        const largeOpt = LARGE_HEAD_OPTIONS.find((o) => o.value === s.largeHeadNotation);
-        const smallOpt = SMALL_HEAD_OPTIONS.find((o) => o.value === s.smallHeadNotation);
-
         return (
           <div key={s.id} className="grid grid-cols-[2rem_1fr_1fr_1fr] items-center gap-2 rounded-lg bg-muted/40 p-1.5 sm:grid-cols-[2rem_1fr_1fr_1fr_auto]">
             <span className="text-center font-mono text-xs text-muted-foreground">{i + 1}</span>

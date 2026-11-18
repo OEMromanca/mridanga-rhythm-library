@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Drum } from "lucide-react";
+import Image from "next/image";
 import drumPhoto from "@/assets/mridanga-account.jpg";
 
 export function AuthShell({ children }: { children: ReactNode }) {
@@ -17,7 +18,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main className="mx-auto w-full max-w-md px-5 pb-10 pt-5 sm:pt-7">
-        <img src={drumPhoto.src || "/mridanga-account.jpg"} alt="Traditional clay mridanga drum" width={1280} height={512} className="mx-auto mb-5 aspect-[5/2] w-full rounded-lg object-cover bg-muted" onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/mridanga-account.jpg"; }} />
+        <Image src={drumPhoto} alt="Traditional clay mridanga drum" width={1280} height={512} className="mx-auto mb-5 aspect-[5/2] w-full rounded-lg object-cover bg-muted" priority />
         {children}
       </main>
     </div>
