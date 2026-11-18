@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { LogIn, LogOut, Menu, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useAccount } from "@/components/auth/AccountProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,9 @@ import { DeleteConfirmationDialog } from "./DeleteConfirmationDialog";
 export function AppLayout() {
   const { user, isAdmin, loading: authLoading, signOut } = useAccount();
   const router = useRouter();
+  const params = useParams();
+  const activeMantraId = params?.id as string | undefined;
+
   const [signingOut, setSigningOut] = useState(false);
   
   const [mantras, setMantras] = useState<Mantra[]>([]);
@@ -60,31 +63,27 @@ export function AppLayout() {
     };
   }, []);
 
-  const [category, setCategory] = useState<Category | "Beats">("Kaharwa Tal");
+  const [isBeatsView, setIsBeatsView] = useState(false);
   const [query, setQuery] = useState("");
   const [drawer, setDrawer] = useState(false);
   const [detailsId, setDetailsId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(null);
   const [toDelete, setToDelete] = useState<Mantra | null>(null);
 
-  const counts = useMemo(() => {
-    const c: Record<string, number> = {};
-    mantras.forEach((m) => (c[m.category] = (c[m.category] ?? 0) + 1));
-    return c;
-  }, [mantras]);
+  // Determine current active mantra and category
+  const activeMantra = useMemo(() => {
+    if (!activeMantraId) return null;
+    return mantras.find((m) => m.id === activeMantraId) || null;
+  }, [mantras, activeMantraId]);
 
-  if (!mounted) {
-    return null;
-  }
+  const category: Category | "Beats" = isBeatsView ? "Beats" : (activeMantra ? activeMantra.category : "Kaharwa Tal");
 
-  const isBeatsView = category === "Beats";
   const inCategory = isBeatsView ? [] : mantras.filter((m) => m.category === category);
   const q = query.trim().toLowerCase();
   const visible = q ? inCategory.filter((m) => m.name.toLowerCase().includes(q) || m.author.toLowerCase().includes(q)) : inCategory;
   const details = mantras.find((m) => m.id === detailsId) ?? null;
 
-  const selectCategory = (c: Category) => { setCategory(c); setQuery(""); setDrawer(false); };
-  const selectBeats = () => { setCategory("Beats"); setQuery(""); setDrawer(false); };
+  const selectBeats = () => { setIsBeatsView(true); setQuery(""); setDrawer(false); };
 
   const save = async (m: Mantra, mode: "create" | "edit") => {
     try {
@@ -106,7 +105,7 @@ export function AppLayout() {
     }
   };
 
-  const sidebar = <Sidebar selected={category} counts={counts} onSelect={selectCategory} isBeatsActive={isBeatsView} onSelectBeats={selectBeats} />;
+  const sidebar = <Sidebar mantras={mantras} isBeatsActive={isBeatsView} onSelectBeats={selectBeats} />;
 
   async function logout() {
     setSigningOut(true);
@@ -116,6 +115,10 @@ export function AppLayout() {
       router.refresh();
     } catch { toast.error("Couldn’t sign out. Please try again."); }
     finally { setSigningOut(false); }
+  }
+
+  if (!mounted) {
+    return null;
   }
 
   return (

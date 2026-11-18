@@ -1,20 +1,36 @@
 import { Drum, Music2 } from "lucide-react";
-import { CATEGORIES, type Category } from "@/lib/mantra/types";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { CATEGORIES } from "@/lib/mantra/types";
+import type { Mantra } from "@/lib/mantra/types";
 import { cn } from "@/lib/utils";
 
 export function Sidebar({
-  selected,
-  counts,
-  onSelect,
+  mantras,
   isBeatsActive,
   onSelectBeats,
 }: {
-  selected: Category | "Beats";
-  counts: Record<string, number>;
-  onSelect: (c: Category) => void;
+  mantras: Mantra[];
   isBeatsActive?: boolean;
   onSelectBeats?: () => void;
 }) {
+  const pathname = usePathname();
+
+  // Compute counts dynamically from mantras
+  const counts = mantras.reduce((acc, m) => {
+    acc[m.category] = (acc[m.category] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Find first mantra ID for each category to link to /tal/[id]
+  const firstMantraPerCategory = CATEGORIES.reduce((acc, cat) => {
+    const found = mantras.find((m) => m.category === cat);
+    if (found) {
+      acc[cat] = found.id;
+    }
+    return acc;
+  }, {} as Record<string, string>);
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-3 px-5 py-5">
@@ -47,15 +63,22 @@ export function Sidebar({
         <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Categories</p>
         <ul className="space-y-0.5">
           {CATEGORIES.map((c) => {
-            const active = c === selected;
+            const firstId = firstMantraPerCategory[c];
+            const href = firstId ? `/tal/${firstId}` : "#";
+            
+            // Check if active based on pathname matching /tal/[id] where the tal belongs to category c
+            const activeMantra = mantras.find((m) => pathname === `/tal/${m.id}`);
+            const active = activeMantra?.category === c;
+
             return (
               <li key={c}>
-                <button
-                  onClick={() => onSelect(c)}
+                <Link
+                  href={href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     active ? "bg-accent text-accent-foreground" : "text-sidebar-foreground hover:bg-muted",
+                    !firstId && "opacity-50 pointer-events-none"
                   )}
                 >
                   <Music2 className={cn("h-4 w-4 shrink-0", active ? "text-primary" : "text-muted-foreground")} />
@@ -68,7 +91,7 @@ export function Sidebar({
                   >
                     {counts[c] ?? 0}
                   </span>
-                </button>
+                </Link>
               </li>
             );
           })}
