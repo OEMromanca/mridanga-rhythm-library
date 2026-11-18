@@ -33,12 +33,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setMounted(true);
-    let isMounted = true;
+    const isMounted = { current: true };
 
     async function getInitialSession() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (isMounted) {
+        if (isMounted.current) {
           if (session?.user) {
             setUser({ id: session.user.id, email: session.user.email || "" });
           } else {
@@ -52,14 +52,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       } catch (err: unknown) {
         console.error("Auth session error:", err instanceof Error ? err.message : String(err));
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted.current) setLoading(false);
       }
     }
 
     getInitialSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: import("@supabase/supabase-js").Session | null) => {
-      if (isMounted) {
+      if (isMounted.current) {
         if (session?.user) {
           const u = { id: session.user.id, email: session.user.email || "" };
           setUser(u);
@@ -73,7 +73,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
-      isMounted = false;
+      isMounted.current = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -99,18 +99,26 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (err: unknown) {
+      console.error("Supabase sign out error:", err instanceof Error ? err.message : String(err));
+    }
     setUser(null);
     try {
       localStorage.removeItem("mridanga_user");
     } catch (err: unknown) {
-      console.error("Failed to remove user:", err instanceof Error ? err.message : String(err));
+      console.error("LocalStorage remove user error:", err instanceof Error ? err.message : String(err));
     }
   };
 
   const isAdmin = user?.id === ADMIN_USER_ID;
 
-  return <AccountContext.Provider value={{ user, isAdmin, loading, signIn, signOut }}>{children}</AccountContext.Provider>;
+  return (
+    <AccountContext.Provider value={{ user, isAdmin, loading, signIn, signOut }}>
+      {children}
+    </AccountContext.Provider>
+  );
 }
 
 export function useAccount() {

@@ -8,12 +8,10 @@ interface LayoutProps {
 }
 
 export default async function LibraryLayout({ children }: LayoutProps) {
-  let mantras: Mantra[] = [];
-  try {
-    mantras = await fetchMantras();
-  } catch (error) {
+  const mantras = await fetchMantras().catch((error: unknown) => {
     console.error('Failed to fetch mantras for library layout sidebar:', error);
-  }
+    return [] as Mantra[];
+  });
 
   return (
     <div className="min-h-screen w-full flex">

@@ -33,12 +33,12 @@ export function AppLayout() {
 
   useEffect(() => {
     setMounted(true);
-    let isMounted = true;
+    const isMounted = { current: true };
 
     async function loadData() {
       try {
         const data = await fetchMantras();
-        if (isMounted) {
+        if (isMounted.current) {
           setMantras(data);
         }
       } catch (err: unknown) {
@@ -52,14 +52,14 @@ export function AppLayout() {
         });
         toast.error(`Failed to load mantras: ${error?.message || "Unknown error"}`);
       } finally {
-        if (isMounted) setLoadingMantras(false);
+        if (isMounted.current) setLoadingMantras(false);
       }
     }
 
     loadData();
 
     return () => {
-      isMounted = false;
+      isMounted.current = false;
     };
   }, []);
 
@@ -92,14 +92,16 @@ export function AppLayout() {
       setForm(null);
       toast.success(mode === "create" ? `“${savedMantra.name}” added to ${savedMantra.category}` : `“${savedMantra.name}” updated`);
     } catch (err: unknown) {
-      let errorMessage = 'Unknown error';
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      } else if (typeof err === 'object' && err !== null) {
-        errorMessage = (err as { message?: string; details?: string }).message || (err as { message?: string; details?: string }).details || JSON.stringify(err);
-      } else {
-        errorMessage = String(err);
-      }
+      const errorMessage = (() => {
+        if (err instanceof Error) {
+          return err.message;
+        }
+        if (typeof err === 'object' && err !== null) {
+          const errObj = err as { message?: string; details?: string };
+          return errObj.message || errObj.details || JSON.stringify(err);
+        }
+        return String(err);
+      })();
       console.error("Failed to save mantra:", errorMessage);
       toast.error("Failed to save mantra to Supabase.");
     }

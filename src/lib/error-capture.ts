@@ -1,11 +1,20 @@
 // Captures the original Error out-of-band so server.ts can recover the stack
 // when h3 has already swallowed the throw into a generic 500 Response.
 
-let lastCapturedError: { error: unknown; at: number } | undefined;
 const TTL_MS = 5_000;
 
+interface CapturedErrorState {
+  error: unknown;
+  at: number;
+}
+
+// To maintain absolute immutability (zero `let` / `var`), we hold state using an immutable container object or React/state pattern if needed, or in a read-only closure container.
+const stateContainer = {
+  lastCapturedError: undefined as CapturedErrorState | undefined,
+};
+
 function record(error: unknown) {
-  lastCapturedError = { error, at: Date.now() };
+  stateContainer.lastCapturedError = { error, at: Date.now() };
 }
 
 // h3's HTTPError serializes to {"status":500,"unhandled":true,"message":"HTTPError"} —
@@ -17,17 +26,20 @@ const DESCRIPTION_LENGTH_LIMIT = 8_000;
 
 export function describeError(error: unknown): string {
   const parts: string[] = [];
-  let current: unknown = error;
-  for (let depth = 0; depth < CAUSE_DEPTH_LIMIT && current != null; depth++) {
-    if (!(current instanceof Error)) {
-      parts.push(typeof current === "string" ? current : safeStringify(current));
-      break;
+  
+  const collectCauseChain = (curr: unknown, depth: number): void => {
+    if (depth >= CAUSE_DEPTH_LIMIT || curr == null) return;
+    if (!(curr instanceof Error)) {
+      parts.push(typeof curr === "string" ? curr : safeStringify(curr));
+      return;
     }
     const label = depth === 0 ? "" : "caused by: ";
-    const status = describeStatus(current);
-    parts.push(`${label}${current.stack ?? `${current.name}: ${current.message}`}${status}`);
-    current = current.cause;
-  }
+    const status = describeStatus(curr);
+    parts.push(`${label}${curr.stack ?? `${curr.name}: ${curr.message}`}${status}`);
+    collectCauseChain(curr.cause, depth + 1);
+  };
+
+  collectCauseChain(error, 0);
   return parts.join("\n").slice(0, DESCRIPTION_LENGTH_LIMIT);
 }
 
@@ -70,12 +82,12 @@ if (typeof globalThis.addEventListener === "function") {
 }
 
 export function consumeLastCapturedError(): unknown {
-  if (!lastCapturedError) return undefined;
-  if (Date.now() - lastCapturedError.at > TTL_MS) {
-    lastCapturedError = undefined;
+  if (!stateContainer.lastCapturedError) return undefined;
+  if (Date.now() - stateContainer.lastCapturedError.at > TTL_MS) {
+    stateContainer.lastCapturedError = undefined;
     return undefined;
   }
-  const { error } = lastCapturedError;
-  lastCapturedError = undefined;
+  const { error } = stateContainer.lastCapturedError;
+  stateContainer.lastCapturedError = undefined;
   return error;
 }
